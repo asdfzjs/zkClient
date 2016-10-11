@@ -1,7 +1,11 @@
 package com.zillionfortune;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -9,9 +13,16 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 
+import com.mongodb.BasicDBObject;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.DBObject;
+import com.mongodb.Mongo;
+import com.mongodb.MongoException;
 
 import org.apache.zookeeper.ZooKeeper;
   
+@SuppressWarnings("deprecation")
 public class zkClient {
   
     private static final int TIME_OUT = 3000;
@@ -19,40 +30,43 @@ public class zkClient {
     
     private static MyTimer commitTimer = new MyTimer();
     
-    public static void display(String id1,String id2,String id3,String id4){
-    	 System.out.println(id1);
-    	 System.out.println(id2);
-    	 System.out.println(id3);
-    	 System.out.println(id4);
+    //MONGO
+    private static final String HOST2 = "192.168.210.66";
+    private static final int PORT = 27017;
+    private static final String DB_NAME = "zjs";  
+    private static final String COLLECTION = "offset";
+    private static Mongo conn=null;  
+    private static DB myDB=null;  
+    private static DBCollection myCollection=null;  
+      
+    static{  
+        try {  
+            conn=new Mongo(HOST2,PORT);//建立数据库连接
+            myDB=conn.getDB(DB_NAME);//使用zjs数据库 
+            myCollection=myDB.getCollection(COLLECTION);
+        } catch (UnknownHostException e) {  
+            e.printStackTrace();  
+        } catch (MongoException e) {  
+            e.printStackTrace();  
+        }  
+    }  
+    
+    
+    public static void insertOffset(String id1,String id2,String id3,String id4,String date){
+    	 List<DBObject> dbList = new ArrayList<DBObject>();
+    	 BasicDBObject doc1 = new BasicDBObject();
+    	 doc1.put("partition_0", id1);
+    	 doc1.put("partition_1", id2);
+    	 doc1.put("partition_2", id3);
+    	 doc1.put("partition_3", id4);
+    	 doc1.put("datetime", date);
+    	 dbList.add(doc1);
+    	 myCollection.insert(dbList);
     }
     
     
     public static void main(String[] args) throws Exception{
-        
-        commitTimer.schedule(new CommitTimerTask(), new Date(System.currentTimeMillis() + 1 * 1000), 1 * 1000);
-        
-//        System.out.println("=========创建节点===========");
-//        if(zookeeper.exists("/test", false) == null)
-//        {
-//            zookeeper.create("/test", "znode1".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-//        }
-//        System.out.println("=============查看节点是否安装成功===============");
-//        System.out.println(new String(zookeeper.getData("/test", false, null)));
-//         
-//        System.out.println("=========修改节点的数据==========");
-//        String data = "zNode2";
-//        zookeeper.setData("/test", data.getBytes(), -1);
-//         
-//        System.out.println("========查看修改的节点是否成功=========");
-//        System.out.println(new String(zookeeper.getData("/test", false, null)));
-//         
-//        System.out.println("=======删除节点==========");
-//        zookeeper.delete("/test", -1);
-//         
-//        System.out.println("==========查看节点是否被删除============");
-//        System.out.println("节点状态：" + zookeeper.exists("/test", false));
-        
-      // zookeeper.close();
+        commitTimer.schedule(new CommitTimerTask(), new Date(System.currentTimeMillis() + 1 * 1000), 60 * 1000);
     } 
     
     private static class  CommitTimerTask extends TimerTask implements Serializable {
@@ -64,7 +78,13 @@ public class zkClient {
 				e.printStackTrace();
 			}
 			try {
-				display(new String(zookeeper.getData("/ywlog/id/partition_0", false, null)), new String(zookeeper.getData("/ywlog/id/partition_1", false, null)), new String(zookeeper.getData("/ywlog/id/partition_2", false, null)), new String(zookeeper.getData("/ywlog/id/partition_3", false, null)));
+				// 创建日期对象
+		        Date d = new Date();
+		        // 给定模式
+		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		        // public final String format(Date date)
+		        String s = sdf.format(d);
+				insertOffset(new String(zookeeper.getData("/ywlog/id/partition_0", false, null)), new String(zookeeper.getData("/ywlog/id/partition_1", false, null)), new String(zookeeper.getData("/ywlog/id/partition_2", false, null)), new String(zookeeper.getData("/ywlog/id/partition_3", false, null)),s);
 			} catch (KeeperException | InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -72,10 +92,5 @@ public class zkClient {
 	}
     
    private  static  class MyTimer extends Timer implements Serializable {
-
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
     }
 }
