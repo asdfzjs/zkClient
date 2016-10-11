@@ -19,6 +19,7 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.Mongo;
 import com.mongodb.MongoException;
+import com.zillionfortune.conf.Conf;
 
 import org.apache.zookeeper.ZooKeeper;
   
@@ -44,6 +45,7 @@ public class zkClient {
             conn=new Mongo(HOST2,PORT);//建立数据库连接
             myDB=conn.getDB(DB_NAME);//使用zjs数据库 
             myCollection=myDB.getCollection(COLLECTION);
+            Conf.Instance().Init(HOST, 1000);  
         } catch (UnknownHostException e) {  
             e.printStackTrace();  
         } catch (MongoException e) {  
@@ -70,24 +72,18 @@ public class zkClient {
     } 
     
     private static class  CommitTimerTask extends TimerTask implements Serializable {
-    	ZooKeeper zookeeper;
+		private static final long serialVersionUID = 1L;
+		ZooKeeper zookeeper;
 		public void run() {
 			try {
 				zookeeper = new ZooKeeper(HOST, TIME_OUT, null);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			try {
-				// 创建日期对象
-		        Date d = new Date();
-		        // 给定模式
-		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		        // public final String format(Date date)
-		        String s = sdf.format(d);
-				insertOffset(new String(zookeeper.getData("/ywlog/id/partition_0", false, null)), new String(zookeeper.getData("/ywlog/id/partition_1", false, null)), new String(zookeeper.getData("/ywlog/id/partition_2", false, null)), new String(zookeeper.getData("/ywlog/id/partition_3", false, null)),s);
-			} catch (KeeperException | InterruptedException e) {
-				e.printStackTrace();
-			}
+			Date d = new Date();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			String s = sdf.format(d);
+			insertOffset(Conf.Instance().Get("ywlog.id.partition_0"), Conf.Instance().Get("ywlog.id.partition_1"), Conf.Instance().Get("ywlog.id.partition_2"), Conf.Instance().Get("ywlog.id.partition_3"),s);
 		}
 	}
     
