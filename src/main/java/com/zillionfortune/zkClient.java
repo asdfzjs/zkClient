@@ -2,6 +2,7 @@ package com.zillionfortune;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -9,6 +10,11 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.curator.retry.RetryNTimes;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -19,7 +25,6 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.Mongo;
 import com.mongodb.MongoException;
-import com.zillionfortune.conf.Conf;
 
 import org.apache.zookeeper.ZooKeeper;
   
@@ -39,13 +44,21 @@ public class zkClient {
     private static Mongo conn=null;  
     private static DB myDB=null;  
     private static DBCollection myCollection=null;  
-      
+    private static Charset charset = Charset.forName("utf-8");
+    private static CuratorFramework client;
+    
     static{  
+    	client = CuratorFrameworkFactory
+                .builder()
+                .connectString(HOST)
+                .namespace("zk/test")
+                .retryPolicy(new RetryNTimes(2000,20000))
+                .build();
+    	client.start();
         try {  
             conn=new Mongo(HOST2,PORT);//建立数据库连接
             myDB=conn.getDB(DB_NAME);//使用zjs数据库 
             myCollection=myDB.getCollection(COLLECTION);
-            Conf.Instance().Init(HOST, 1000);  
         } catch (UnknownHostException e) {  
             e.printStackTrace();  
         } catch (MongoException e) {  
@@ -72,18 +85,28 @@ public class zkClient {
     } 
     
     private static class  CommitTimerTask extends TimerTask implements Serializable {
-		private static final long serialVersionUID = 1L;
-		ZooKeeper zookeeper;
+    	ZooKeeper zookeeper;
 		public void run() {
 			try {
 				zookeeper = new ZooKeeper(HOST, TIME_OUT, null);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			Date d = new Date();
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			String s = sdf.format(d);
-			insertOffset(Conf.Instance().Get("ywlog.id.partition_0"), Conf.Instance().Get("ywlog.id.partition_1"), Conf.Instance().Get("ywlog.id.partition_2"), Conf.Instance().Get("ywlog.id.partition_3"),s);
+			try {
+				// 创建日期对象
+		        Date d = new Date();
+		        // 给定模式
+		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		        // public final String format(Date date)
+		        String s = sdf.format(d);
+		        byte[] bs1 = client.getData().watched().inBackground().forPath("/ywlog/id/partition_0");
+		        byte[] bs2 = client.getData().watched().inBackground().forPath("/ywlog/id/partition_1");
+		        byte[] bs3 = client.getData().watched().inBackground().forPath("/ywlog/id/partition_2");
+		        byte[] bs4 = client.getData().watched().inBackground().forPath("/ywlog/id/partition_3");
+				insertOffset(new String(bs1,charset), new String(bs2,charset), new String(bs3,charset), new String(bs4,charset),s);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
     
