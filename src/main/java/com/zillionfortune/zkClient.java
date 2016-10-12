@@ -67,13 +67,14 @@ public class zkClient {
     }  
     
     
-    public static void insertOffset(String id1,String id2,String id3,String id4,String date){
+    public static void insertOffset(String id1,String id2,String id3,String id4,String id5,String date){
     	 List<DBObject> dbList = new ArrayList<DBObject>();
     	 BasicDBObject doc1 = new BasicDBObject();
     	 doc1.put("partition_0", id1);
     	 doc1.put("partition_1", id2);
     	 doc1.put("partition_2", id3);
     	 doc1.put("partition_3", id4);
+    	 doc1.put("partition_4", id5);
     	 doc1.put("datetime", date);
     	 dbList.add(doc1);
     	 myCollection.insert(dbList);
@@ -81,7 +82,7 @@ public class zkClient {
     
     
     public static void main(String[] args) throws Exception{
-        commitTimer.schedule(new CommitTimerTask(), new Date(System.currentTimeMillis() + 1 * 1000), 60 * 1000);
+        commitTimer.schedule(new CommitTimerTask(), new Date(System.currentTimeMillis() + 1 * 1000), 60*30*1000);
     } 
     
     private static class  CommitTimerTask extends TimerTask implements Serializable {
@@ -103,7 +104,8 @@ public class zkClient {
 		        byte[] bs2 = client.getData().forPath("id/partition_1");
 		        byte[] bs3 = client.getData().forPath("id/partition_2");
 		        byte[] bs4 = client.getData().forPath("id/partition_3");
-				insertOffset(new String(bs1,charset), new String(bs2,charset), new String(bs3,charset), new String(bs4,charset),s);
+		        byte[] bs5 = client.getData().forPath("id/partition_4");
+				insertOffset(new String(bs1,charset), new String(bs2,charset), new String(bs3,charset), new String(bs4,charset),new String(bs5,charset),s);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
