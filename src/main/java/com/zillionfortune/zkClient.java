@@ -51,7 +51,7 @@ public class zkClient {
     	client = CuratorFrameworkFactory
                 .builder()
                 .connectString(HOST)
-                .namespace("zk/test")
+                .namespace("ywlog")
                 .retryPolicy(new RetryNTimes(2000,20000))
                 .build();
     	client.start();
@@ -99,10 +99,10 @@ public class zkClient {
 		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		        // public final String format(Date date)
 		        String s = sdf.format(d);
-		        byte[] bs1 = client.getData().watched().inBackground().forPath("/ywlog/id/partition_0");
-		        byte[] bs2 = client.getData().watched().inBackground().forPath("/ywlog/id/partition_1");
-		        byte[] bs3 = client.getData().watched().inBackground().forPath("/ywlog/id/partition_2");
-		        byte[] bs4 = client.getData().watched().inBackground().forPath("/ywlog/id/partition_3");
+		        byte[] bs1 = client.getData().forPath("id/partition_0");
+		        byte[] bs2 = client.getData().forPath("id/partition_1");
+		        byte[] bs3 = client.getData().forPath("id/partition_2");
+		        byte[] bs4 = client.getData().forPath("id/partition_3");
 				insertOffset(new String(bs1,charset), new String(bs2,charset), new String(bs3,charset), new String(bs4,charset),s);
 			} catch (Exception e) {
 				e.printStackTrace();
